@@ -80,4 +80,5 @@ class Enviroment:
 amapola=Plant('amapola', desc='Una simple amapola')
 pradera=Enviroment('pradera',np.random.exponential,paramsDistro=[],desc='una simple pradera', listPlants=[amapola])
 print(pradera.applyDistro())
+
 print(pradera.getPlants())
