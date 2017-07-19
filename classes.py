@@ -1,13 +1,15 @@
 import numpy as np
+import copy as cp
 
 ################################################################################
 class BasicPlayer:
     """docstring for BasicPlayer.
     """
-    def __init__(self, name, herb=0,owner=None):
+    def __init__(self, name, owner=None, herb=0,hunt=0):
         self.name = name
-        self.herb = int(herb)
         self.owner= owner
+        self.herb = int(herb)
+        self.hunt = int(hunt)
 
     def __str__( self ):
         return "Name : " +self.name +" herb: "+ str(self.herb)
@@ -50,16 +52,15 @@ class OtherObj(Foundable):
 ################################################################################
 class Enviroment:
     """docstring for Enviroment.
-       Actualmente el Enviroment solo dispone de lista de plantas.
     """
     def __init__(self, name,probDistro, paramsDistro=[],desc=None,listPlants=[],listAnimals=[],listOtherObj=[]):
         self.name=name
         self.probDistro=probDistro #https://en.wikipedia.org/wiki/List_of_probability_distributions
         self.paramsDistro=paramsDistro
         self.desc=desc
-        self.listPlants=sorted(listPlants, reverse=True)#lista de tuplas (prob, obj, numObj)
-        self.listAnimals=sorted(listAnimals, reverse=True)#lista de tuplas (prob, obj, numObj)
-        self.listOtherObj=sorted(listOtherObj, reverse=True)#lista de tuplas (prob, obj, numObj)
+        self.listPlants=sorted(cp.deepcopy(listPlants), reverse=True)#lista de tuplas (prob, obj, numObj)
+        self.listAnimals=sorted(cp.deepcopy(listAnimals), reverse=True)#lista de tuplas (prob, obj, numObj)
+        self.listOtherObj=sorted(cp.deepcopy(listOtherObj), reverse=True)#lista de tuplas (prob, obj, numObj)
 
     def __str__(self):
         return self.name +': ' + self.desc
@@ -68,18 +69,8 @@ class Enviroment:
         """devuelve un numero aleatorio con probabilidad del Enviroment"""
         return self.probDistro(*self.paramsDistro,num)
 
-
-
-#  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
-    def getPlants(self):
-        return self.listPlants
-    def getAnimals(self):
-        return self.listAnimals
-    def getOtherObj(self):
-        return self.getOtherObj
     def getObj(self):
-        return {'Plants':self.getPlants(),'Animals':self.getAnimals(),'Other':self.getOtherObj()}
-#  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
+        return {'Plants':self.listPlants,'Animals':self.listAnimals,'Other':self.listOtherObj}
 
 ################################################################################
 class Game:
@@ -88,25 +79,29 @@ class Game:
     """
     def __init__(self, name, lPlayer=[],lEnv=[]):
         self.name=name
-        self.lPlayer=lPlayer
-        self.lEnv=lEnv
+        self.lPlayer=cp.deepcopy(lPlayer)
+        self.lEnv=cp.deepcopy(lEnv)
 
 #  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
-    def addPlayer(self,p):
-        self.lPlayer.append(p)
+    def addPlayers(self,lp):
+        for p in lp:
+            self.lPlayer.append(cp.deepcopy(p))
 
-    def addEnv(self,e):
-        self.lEnv.append(e)
+    def addEnvs(self,le):
+        for e in le:
+            self.lEnv.append(cp.deepcopy(e))# deepcopy esnecesario
 
-    def rmPlayer(self, p):
-        self.lPlayer.remove(p)
+    def rmPlayers(self, lp):
+        for p in lp:
+            self.lPlayer.remove(p)
 
-    def rmEnv(self,e):
-        self.lEnv.remove(p)
+    def rmEnvs(self,e):
+        for e in le:
+            self.lEnv.remove(e)
 #  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
     def serchPlant(self,nHoras, pl, env, dice=0):
         L=[]
-        plants=env.getPlants()
+        plants=env.listPlants
         #formula prob
         probs=env.applyDistro(nHoras)+(bp.herb/100)*1.5
 
@@ -116,6 +111,8 @@ class Game:
                     L.append(plants[j][1])#anyadimos el elemento a la lista resultado
                     break
         return L
+#  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
+
 
 amapola=Plant('amapola', desc='Una simple amapola')
 rosa=Plant('rosa',desc='una rosa roja')
@@ -124,16 +121,21 @@ perro=Animal('perro',desc='Un perro')
 pradera=Enviroment('pradera',np.random.beta,paramsDistro=[1,2.3], \
                     desc='una simple pradera', \
                     listPlants=[(0.7,rosa,1),(0.5,amapola,1), (0.9,bl,1)], listAnimals=[perro])
-bp=BasicPlayer('ton',herb=18)
+bp=BasicPlayer('ton',herb=18, hunt=5)
 g=Game('prueba', lEnv=[pradera])
 
 
+print('cambio cad\n'+ str(pradera))
+g.lEnv[0].desc='hola'
+print(pradera)
+print(g.lEnv[0])
+
+''' pruebas PROBABILIDADES
 L=g.serchPlant(10,bp,pradera,0)
-
-
-print(pradera.getPlants())
+print(pradera.listPlants)
 print(len(L))
 print(L.count(bl))
 print(L.count(rosa))
 print(L.count(amapola))
 print(L)
+'''
