@@ -5,13 +5,13 @@ import copy as cp
 class BasicPlayer:
     """docstring for BasicPlayer.
     """
-    def __init__(self, name, owner=None, skills={}):
+    def __init__(self, name, owner=None, dSkills={}):
         self.name = name
         self.owner= owner
-        self.skills=skills
+        self.dSkills=dSkills
 
     def __str__( self ):
-        return "Name : " +self.name +" skills: "+ str(self.skills)
+        return "Name : " +self.name +" skills: "+ str(self.dSkills)
 
 ################################################################################
 class Foundable:
@@ -57,7 +57,7 @@ class Enviroment:
         self.probDistro=probDistro #https://en.wikipedia.org/wiki/List_of_probability_distributions
         self.paramsDistro=paramsDistro
         self.desc=desc
-        self.dicObj=dicObj
+        self.dicObj=cp.deepcopy(dicObj)
         #self.listPlants=sorted(cp.deepcopy(listPlants), reverse=True)#lista de tuplas (prob, obj, numObj)
         #self.listAnimals=sorted(cp.deepcopy(listAnimals), reverse=True)#lista de tuplas (prob, obj, numObj)
         #self.listOtherObj=sorted(cp.deepcopy(listOtherObj), reverse=True)#lista de tuplas (prob, obj, numObj)
@@ -82,48 +82,90 @@ class Game:
         self.lskills=cp.deepcopy(lskills)
 
 #  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
+
+    def createPlayer(self,name,owner,dSkills):
+        '''crea un jugador en la partida.'''
+        self.lPlayer.append(BasicPlayer(name, owner,dSkills)
+
+    def createEnviroment(self,name,probDistro, paramsDistro,desc,dObj):
+        '''crea un enviroment en la partida'''
+        self.lEnv.append(Enviroment(name,probDistro, paramsDistro,desc,dObj))
+
     def addPlayers(self,lp):
+        '''anyade una copia del jugador pasado por argumento'''
         for p in lp:
             self.lPlayer.append(cp.deepcopy(p))
 
     def rmPlayers(self, lp):
+        '''elimina el jugador de la partida pasado por argumento'''
         for p in lp:
             self.lPlayer.remove(p)
 
     def addEnvs(self,le):
+        '''anyade una copia del enviroment pasado por argumento'''
         for e in le:
             self.lEnv.append(cp.deepcopy(e))# deepcopy esnecesario
 
     def rmEnvs(self,e):
+        '''elimina el enviroment de la partida pasado por argumento'''
         for e in le:
             self.lEnv.remove(e)
 
     def addSkills(self, ls,statDefault=0, objDefault=[]):
+        '''anyade una skill al game, y tambien a los envs y player'''
         for s in ls:
             if s not in self.lskills:
                 for p in self.lPlayer:
                     p.skills[s]=statDefault
                 for e in self.lEnv:
                     e.dicObj[s]=cp.deepcopy(objDefault)
-
         self.lskills+= cp.deepcopy(ls)
+
+    def rmSkills(self, ls):
+        '''elimina una skill del game, y tambien de los envs y player'''
+        for s in ls:
+            for p in self.lPlayer:
+                del p.skills[s]
+            for e in self.lEnv:
+                del e.dicObj[s]
+            self.lskills.remove(s)
+
+
 #  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
     def search(self,env,pl,skill,nHoras=1,dice=0):
+        '''busca en un enviroment (env) usando la skill (skill) de un BasicPlayer (pl)
+           durante nHoras y puede tener en cuenta un dado.
+           Una vez encontrado el objeto actualiza la lista
+        '''
         ret=[]
         stat=pl.skills[skill]
         L=env.dicObj[skill]
         #formula prob
+        #nHoras permite usar la distro con el param size
         probs=env.applyDistro(nHoras)+(stat/100)*1 + (dice/100)*1
 
         for p in probs:
             for j in range(len(L)):
-                if p > L[j][0]:#probabilidad de la tupla numero i
+                if p > L[j][0]:#probabilidad de la tupla numero j
                     ret.append(L[j][1])#anyadimos el elemento a la lista resultado
+                    if L[j][2]-1 == 0:#restamos al numero de elementos que quedaban
+                        L.pop(j) #si no quedan mas borramos el objeto
                     break
         return ret
-#  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
+################################################################################
+class App:
 
+    def __init__(self):
+        self.lGames=[]
+        self.Obj{}
+        self.lEnv=[]
 
+    def readObj(self, namefile):
+        with open(namefile) as f:
+            ls=f.readlines()
+            for l in ls:
+                k,v =l.split(':')# separamos la clave de los valores
+                TODO
 #
 #
 #
@@ -174,14 +216,25 @@ print(g.lPlayer[0].skills.keys(),g.lPlayer[0].skills['herb'],g.lPlayer[0].skills
 g.lEnv[0].dicObj['herb']= listaPlantas
 print(g.lEnv[0].dicObj.keys(),g.lEnv[0].dicObj['herb'],g.lEnv[0].dicObj['hunt'])
 
-'''realizamos busquedas
-L=g.search(g.lEnv[0],g.lPlayer[0], 'herb')
-print(L)
+'''
+print('pop')
+print(listaPlantas)
+print(listaPlantas.pop())
+print(listaPlantas)
 '''
 
-#anyadimos una nueva skill
+'''realizamos busquedas'''
+print('final prueba')
+print(g.lEnv[0].dicObj['herb'])
+L=g.search(g.lEnv[0],g.lPlayer[0], 'herb')
+print('objeto:'+ str(L))
+print(g.lEnv[0].dicObj['herb'])
 
+
+#anyadimos una nueva skill
+'''
 g.addSkills(['other'],10,[(0.5,cuchillo,2),(0.2,manzana,1)])
 print('Game skills:'+ str(g.lskills))
 print(g.lPlayer[0].skills.keys(),g.lPlayer[0].skills['herb'],g.lPlayer[0].skills['hunt'],g.lPlayer[0].skills['other'])
 print(g.lEnv[0].dicObj.keys(),g.lEnv[0].dicObj['herb'],g.lEnv[0].dicObj['hunt'],g.lEnv[0].dicObj['other'])
+'''
