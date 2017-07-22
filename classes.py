@@ -17,19 +17,21 @@ class BasicPlayer:
 class Foundable:
     """docstring for Foundable.
     """
-    def __init__(self, name,desc=None):
+    def __init__(self, name,desc=None,fClass='Other'):
         self.name=name
         self.desc=desc
-
+        self.fClass=fClass
+        #Clase de los objetos, permite tener clases dinamicas de objetos
+        #Vuelve innecesarias a las clases Plant, Animal y OtherObj
     def __str__(self):
-        return self.desc
+        return self.desc+ self.fClass
 
 ################################################################################
 class Plant(Foundable):
     """docstring for Plant.
     """
-    def __init__(self, name, desc=None):
-        super(Plant, self).__init__(name, desc)
+    def __init__(self, name, desc=None, fClass='Plant'):
+        super(Plant, self).__init__(name, desc,fClass)
 
     def __str__(self):
         return self.desc
@@ -38,8 +40,8 @@ class Plant(Foundable):
 class Animal(Foundable):
     """docstring for Animal.
     """
-    def __init__(self, name, desc=None):
-        super(Animal, self).__init__(name, desc)
+    def __init__(self, name, desc=None,fClass='Animal'):
+        super(Animal, self).__init__(name, desc,fClass)
 
 ################################################################################
 class OtherObj(Foundable):
@@ -69,6 +71,22 @@ class Enviroment:
         """devuelve un numero aleatorio con probabilidad del Enviroment"""
         return self.probDistro(*self.paramsDistro,num)
 
+    def addObj(self,obj, prob, num=1):
+        self.dicObj[obj.fClass]=cp.deepcopy((prob,obj, num))
+        sorted(self.dicObj[obj.fClass], reverse=True)
+
+    def createObj(self, name, desc,fClass, prob,num=1):
+        self.dicObj[fClass]=(prob,Foundable(name,owner,fClass),num)
+        sorted(self.dicObj[obj.fClass], reverse=True)
+
+    def rmObj(self,Obj):
+        L=self.dicObj[Obj.fClass]
+        for i in range(len(L)):
+            if L[i][1]==obj:
+                L.remove(L[i])
+                break
+
+
 
 ################################################################################
 class Game:
@@ -82,10 +100,32 @@ class Game:
         self.lskills=cp.deepcopy(lskills)
 
 #  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
+    def search(self,env,pl,skill,nHoras=1,dice=0):
+        '''busca en un enviroment (env) usando la skill (skill) de un BasicPlayer (pl)
+           durante nHoras y puede tener en cuenta un dado.
+           Una vez encontrado el objeto actualiza la lista
+        '''
+        ret=[]
+        stat=pl.skills[skill]
+        L=env.dicObj[skill]
+        #formula prob
+        #nHoras permite usar la distro con el param size
+        probs=env.applyDistro(nHoras)+(stat/100)*1 + (dice/100)*1
+
+        for p in probs:
+            for j in range(len(L)):
+                if p > L[j][0]:#probabilidad de la tupla numero j
+                    ret.append(L[j][1])#anyadimos el elemento a la lista resultado
+                    if L[j][2]-1 == 0:#restamos al numero de elementos que quedaban
+                        L.pop(j) #si no quedan mas borramos el objeto
+                    break
+        return ret
+
+#  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
 
     def createPlayer(self,name,owner,dSkills):
         '''crea un jugador en la partida.'''
-        self.lPlayer.append(BasicPlayer(name, owner,dSkills)
+        self.lPlayer.append(BasicPlayer(name, owner,dSkills))
 
     def createEnviroment(self,name,probDistro, paramsDistro,desc,dObj):
         '''crea un enviroment en la partida'''
@@ -130,42 +170,41 @@ class Game:
                 del e.dicObj[s]
             self.lskills.remove(s)
 
-
-#  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
-    def search(self,env,pl,skill,nHoras=1,dice=0):
-        '''busca en un enviroment (env) usando la skill (skill) de un BasicPlayer (pl)
-           durante nHoras y puede tener en cuenta un dado.
-           Una vez encontrado el objeto actualiza la lista
-        '''
-        ret=[]
-        stat=pl.skills[skill]
-        L=env.dicObj[skill]
-        #formula prob
-        #nHoras permite usar la distro con el param size
-        probs=env.applyDistro(nHoras)+(stat/100)*1 + (dice/100)*1
-
-        for p in probs:
-            for j in range(len(L)):
-                if p > L[j][0]:#probabilidad de la tupla numero j
-                    ret.append(L[j][1])#anyadimos el elemento a la lista resultado
-                    if L[j][2]-1 == 0:#restamos al numero de elementos que quedaban
-                        L.pop(j) #si no quedan mas borramos el objeto
-                    break
-        return ret
 ################################################################################
 class App:
 
     def __init__(self):
         self.lGames=[]
-        self.Obj{}
+        self.dObj={}
         self.lEnv=[]
 
-    def readObj(self, namefile):
-        with open(namefile) as f:
-            ls=f.readlines()
-            for l in ls:
-                k,v =l.split(':')# separamos la clave de los valores
-                TODO
+    def readObj(self, cadObj):
+        '''funcion de lectura de objetos de un fichero.
+        Se llama cuando en la linea se ha leido un o;
+        El objeto sigue el formato:
+           'clave:[name,desc]'
+        '''
+        k , v =cadObj.split(':')# separamos la clave de los valores
+        print(k)
+        name,desc=v.split(';')
+        self.dObj[k]=Foundable(name,desc,k)
+
+    def readEnv(self, cadEnv):
+        name,probDistro, paramsDistro,desc,dicObj= cadEnv.split(';')
+        probDistro=eval(probDistro)#conseguimos la funcion numpy
+
+        #transformamos la lista de parametros en numeros
+        paramsDistro=paramsDistro[1:-1].split(',')
+        lParams=[]
+        for x in paramsDistro:
+            print(x)
+            lParams.append(float(x))
+        #fin
+        TODO hay problemas con el DICT
+        self.lEnv.append(Enviroment(name,probDistro, lParams,desc,dicObj))
+
+
+
 #
 #
 #
@@ -205,31 +244,36 @@ pradera=Enviroment('pradera',np.random.beta,paramsDistro=[1,2.3], \
 
 
 #creamos player
-bp=BasicPlayer('ton','ton',skills=d)
+bp=BasicPlayer('ton','ton',dSkills=d)
 
+#creamos un Game
 g=Game('prueba', lskills=ls, lEnv=[pradera], lPlayer=[bp])
 
+#creamos la App
+app=App()
+app.lGames.append(g)
+app.readObj("Animal:prueba;esto es una prueba")
+app.readEnv("'pradera';np.random.beta;[1,2.3]; 'una simple pradera';d")
+print(app.lGames)
+print(app.dObj)
+print(app.lEnv[0].applyDistro())
+
+'''
 print('Game skills:'+ str(g.lskills))
 g.lPlayer[0].skills['herb']=15
 g.lPlayer[0].skills['hunt']=15
 print(g.lPlayer[0].skills.keys(),g.lPlayer[0].skills['herb'],g.lPlayer[0].skills['hunt'])
 g.lEnv[0].dicObj['herb']= listaPlantas
 print(g.lEnv[0].dicObj.keys(),g.lEnv[0].dicObj['herb'],g.lEnv[0].dicObj['hunt'])
-
-'''
-print('pop')
-print(listaPlantas)
-print(listaPlantas.pop())
-print(listaPlantas)
 '''
 
-'''realizamos busquedas'''
+'''realizamos busquedas
 print('final prueba')
 print(g.lEnv[0].dicObj['herb'])
 L=g.search(g.lEnv[0],g.lPlayer[0], 'herb')
 print('objeto:'+ str(L))
 print(g.lEnv[0].dicObj['herb'])
-
+'''
 
 #anyadimos una nueva skill
 '''
