@@ -1,5 +1,6 @@
 import numpy as np
 import copy as cp
+import ast
 
 ################################################################################
 class BasicPlayer:
@@ -10,8 +11,11 @@ class BasicPlayer:
         self.owner= owner
         self.dSkills=dSkills
 
-    def __str__( self ):
+    def __repr__( self ):
         return "Name : " +self.name +" skills: "+ str(self.dSkills)
+
+    def __cmp__(self, other):
+        pass
 
 ################################################################################
 class Foundable:
@@ -23,8 +27,8 @@ class Foundable:
         self.fClass=fClass
         #Clase de los objetos, permite tener clases dinamicas de objetos
         #Vuelve innecesarias a las clases Plant, Animal y OtherObj
-    def __str__(self):
-        return self.desc+ self.fClass
+    def __repr__(self):
+        return self.name+' '+self.desc
 
 ################################################################################
 class Plant(Foundable):
@@ -32,9 +36,6 @@ class Plant(Foundable):
     """
     def __init__(self, name, desc=None, fClass='Plant'):
         super(Plant, self).__init__(name, desc,fClass)
-
-    def __str__(self):
-        return self.desc
 
 ################################################################################
 class Animal(Foundable):
@@ -64,8 +65,11 @@ class Enviroment:
         #self.listAnimals=sorted(cp.deepcopy(listAnimals), reverse=True)#lista de tuplas (prob, obj, numObj)
         #self.listOtherObj=sorted(cp.deepcopy(listOtherObj), reverse=True)#lista de tuplas (prob, obj, numObj)
 
-    def __str__(self):
+    def __repr__(self):
         return self.name +': ' + self.desc
+
+    def __cmp__(self, other):
+        pass
 
     def applyDistro(self, num=1):
         """devuelve un numero aleatorio con probabilidad del Enviroment"""
@@ -98,6 +102,13 @@ class Game:
         self.lPlayer=cp.deepcopy(lPlayer)
         self.lEnv=cp.deepcopy(lEnv)
         self.lskills=cp.deepcopy(lskills)
+
+
+    def __repr__(self):
+        return self.name
+
+    def __cmp__(self, other):
+        pass
 
 #  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  ##  #
     def search(self,env,pl,skill,nHoras=1,dice=0):
@@ -179,29 +190,44 @@ class App:
         self.lEnv=[]
 
     def readObj(self, cadObj):
-        '''funcion de lectura de objetos de un fichero.
-        Se llama cuando en la linea se ha leido un o;
+        '''funcion de lectura de objetos de una cadena.
+        Se llama cuando en la linea se ha leido un o;;
         El objeto sigue el formato:
-           'clave:[name,desc]'
+           'clave:[name;desc]'
         '''
         k , v =cadObj.split(':')# separamos la clave de los valores
-        print(k)
         name,desc=v.split(';')
         self.dObj[k]=Foundable(name,desc,k)
 
     def readEnv(self, cadEnv):
+        '''funcion de lectura de enviroments de una cadena.
+        Se llama cuando en la linea se ha leido un e;;
+        El enviroment sigue el formato:
+           'name;probDistro;paramsDistro;desc;dicObj'
+
+        '''
         name,probDistro, paramsDistro,desc,dicObj= cadEnv.split(';')
+        #!!!!!!!poco seguro
         probDistro=eval(probDistro)#conseguimos la funcion numpy
 
-        #transformamos la lista de parametros en numeros
-        paramsDistro=paramsDistro[1:-1].split(',')
-        lParams=[]
-        for x in paramsDistro:
-            print(x)
-            lParams.append(float(x))
-        #fin
-        TODO hay problemas con el DICT
-        self.lEnv.append(Enviroment(name,probDistro, lParams,desc,dicObj))
+        paramsDistro=ast.literal_eval(paramsDistro)
+        paramsDistro=[float(i) for i in paramsDistro]
+
+        dicObj=ast.literal_eval(dicObj)
+        self.lEnv.append(Enviroment(name,probDistro, paramsDistro,desc.strip('\n'),dicObj))
+
+    def readData(self, filename):
+        with open(filename) as fl:
+            data=fl.readlines()
+            for l in data:
+                if l == '\n':
+                    return
+                t,rest=l.split(';',1)
+                if(t.lower()=='o'):
+                    self.readObj(rest)
+                elif(t.lower()=='e'):
+                    self.readEnv(rest)
+            fl.closed
 
 
 
@@ -252,11 +278,17 @@ g=Game('prueba', lskills=ls, lEnv=[pradera], lPlayer=[bp])
 #creamos la App
 app=App()
 app.lGames.append(g)
+app.readData('try.txt')
+print(app.lGames)
+print(app.dObj)
+print(app.lEnv[0].dicObj)
+'''
 app.readObj("Animal:prueba;esto es una prueba")
-app.readEnv("'pradera';np.random.beta;[1,2.3]; 'una simple pradera';d")
+app.readEnv("'pradera';np.random.beta;[1,2.3]; 'una simple pradera';"+ str(d))
 print(app.lGames)
 print(app.dObj)
 print(app.lEnv[0].applyDistro())
+'''
 
 '''
 print('Game skills:'+ str(g.lskills))
